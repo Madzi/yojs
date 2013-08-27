@@ -1,10 +1,15 @@
 YUI.add('yojs-page-dashboard', function (Y) {
 
 	var CONTAINER	= 'container',
-		STRINGS		= 'strings';
+		STRINGS		= 'strings',
+		PROJECTS 	= 'projects';
 
 	Y.namespace('YOJS.Page').Dashboard = Y.Base.create('yojs-page-dashboard', Y.View, [], {
-		template: '<h1>{{dashboard}}</h1>',
+		template: '<h1>{{dashboard}}</h1>' +
+				'<div id="prj_tools">' +
+				'<button id="btnAdd" class="yui3-button yui3-button-success">{{btnAdd}}</button>' +
+				'</div>' +
+				'<div id="prj_table"></div>',
 
 		initializer: function () {},
 
@@ -12,13 +17,46 @@ YUI.add('yojs-page-dashboard', function (Y) {
 			var self		= this,
 				content		= Y.Handlebars.compile(self.template),
 				container 	= self.getContainer(),
-				strings 	= self.getStrings();
+				strings 	= self.getStrings(),
+				table 		= new Y.DataTable({
+					columns: [
+						{
+							key			: 'num',
+							label		: strings.numColumn,
+							formatter	: function (cell) {
+								return cell.rowIndex + 1;
+							}
+						},
+						{
+							key			: 'name',
+							label		: strings.nameColumn,
+							allowHTML	: true,
+							formatter	: function (cell) {
+								return Y.Lang.sub('<a href="#/project/{id}/">{name}</a>', cell.record.toJSON());
+							}
+						},
+						{
+							key			: 'date',
+							label		: strings.dateColumn,
+							formatter	: function (cell) {
+								return Y.Date.format(cell.value, { format: strings.dateFormat });
+							}
+						}
+					],
+					data: self.getProjects(),
+					width: '100%',
+					strings: {
+						emptyMessage: strings.noProjects
+					}
+				});
 
 			if (parentNode instanceof Y.Node && container.get('parent') != parentNode) {
 				parentNode.appendChild(container);
 			}
 
 			container.setHTML(content(strings));
+
+			table.render(container.one('#prj_table'));
 
 			return self;
 		},
@@ -29,13 +67,31 @@ YUI.add('yojs-page-dashboard', function (Y) {
 
 		getStrings: function () {
 			return this.get(STRINGS);
+		},
+
+		getProjects: function () {
+			return this.get(PROJECTS);
+		},
+
+		setProjects: function (projects) {
+			return this.set(PROJECTS, projects);
 		}
 	}, {
 		ATTRS: {
 			strings: {
 				value: {
-					dashboard: 'Рабочий стол'
+					dashboard 	: 'Projects',
+					btnAdd		: 'Add',
+					noProjects	: 'No projects to show',
+					numColumn	: '#',
+					nameColumn	: 'Name',
+					dateColumn	: 'Date',
+					dateFormat	: '%d.%m.%Y'
 				}
+			},
+			projects: {
+				value: null,
+				validator: Y.YOJS.Validator.Model.List.Project
 			}
 		}
 	});
@@ -43,6 +99,10 @@ YUI.add('yojs-page-dashboard', function (Y) {
 }, '0.1', {
 	requires: [
 		'view',
-		'handlebars'
+		'handlebars',
+		'datatable',
+		'datatype',
+		'cssbutton',
+		'yojs-model-project'
 	]
 });
