@@ -1,6 +1,7 @@
 YUI.add('yojs-app', function (Y) {
 
 	var URL_ROOT	= '/',
+		URL_HELP 	= '/help/',
 		URL_PROJECT	= '/project/:id/',
 
 		CONTAINER	= 'container',
@@ -11,6 +12,7 @@ YUI.add('yojs-app', function (Y) {
 	Y.namespace('YOJS').App = Y.Base.create('yojs-app', Y.App, [], {
 		views: {
 			dashboard 	: { type: Y.YOJS.Page.Dashboard },
+			help 		: { type: Y.YOJS.Page.Help },
 			project 	: { type: Y.YOJS.Page.Project, parent: 'dashboard' }
 		},
 
@@ -92,6 +94,10 @@ YUI.add('yojs-app', function (Y) {
 			});
 		},
 
+		showHelp: function (req, res) {
+			this.showView('help', {});
+		},
+
 		showProject: function (req, res) {
 			var projects 	= this.getProjects(),
 				id 			= req.params.id;
@@ -105,6 +111,7 @@ YUI.add('yojs-app', function (Y) {
 			routes: {
 				value: [
 					{ path: URL_ROOT, 		callbacks: 'showDashboard' },
+					{ path: URL_HELP, 		callbacks: 'showHelp' },
 					{ path: URL_PROJECT,	callbacks: 'showProject' }
 				]
 			},
@@ -126,6 +133,7 @@ YUI.add('yojs-app', function (Y) {
 		'app',
 		'yojs-model-project',
 		'yojs-page-dashboard',
+		'yojs-page-help',
 		'yojs-page-project'
 	]
 });

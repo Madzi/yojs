@@ -7,7 +7,7 @@ YUI.add('yojs-page-dashboard', function (Y) {
 	Y.namespace('YOJS.Page').Dashboard = Y.Base.create('yojs-page-dashboard', Y.View, [], {
 		template: '<h1>{{dashboard}}</h1>' +
 				'<div id="prj_tools">' +
-				'<button id="btnAdd" class="yui3-button yui3-button-success">{{btnAdd}}</button>' +
+				'<button id="btnAdd" class="pure-button pure-button-success">{{btnAdd}}</button>' +
 				'</div>' +
 				'<div id="prj_table"></div>',
 
