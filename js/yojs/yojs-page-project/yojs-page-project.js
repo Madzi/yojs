@@ -19,7 +19,17 @@ YUI.add('yojs-page-project', function (Y) {
 				'</td></tr></tbody></table>' +
 				'<textarea id="temp"></textarea>',
 
-		initializer: function () {},
+		_simplifyString: function (str) {
+			return str.replace('<br>', '\n').replace(/<\/?[^>]+(>|$)/g, '');
+		},
+
+		initializer: function (config) {
+			config = config || {};
+
+			if (!config.stream) {
+				this.set('stream', new Y.YOJS.Stream());
+			} 
+		},
 
 		render: function (parentNode) {
 			var self		= this,
@@ -28,7 +38,9 @@ YUI.add('yojs-page-project', function (Y) {
 				strings 	= self.getStrings(),
 				project 	= self.getProject(),
 				modules 	= project.getModules(),
-				editor		= new Y.EditorBase(),
+				editor		= new Y.EditorBase({
+					extracss: '.keyword { font-weight: bold; color: #008; } .delimiter { color: #088; }'
+				}),
 				table		= new Y.DataTable({
 					columns: [
 						{
@@ -44,6 +56,16 @@ YUI.add('yojs-page-project', function (Y) {
 							key			: 'date',
 							label		: strings.dateColumn,
 							formatter	: Y.YOJS.Formatters.date
+						},
+						{
+							key 		: 'loaded',
+							label 		: strings.loadedColumn,
+							allowHTML 	: true,
+							formatter 	: function (cell) {
+								var modules = Y.O7 || {};
+
+								return modules[cell.record.getName()] ? strings.yes : strings.no;
+							}
 						}
 					],
 					width: '100%',
@@ -72,18 +94,31 @@ YUI.add('yojs-page-project', function (Y) {
 
 			table.after('selectedRowChange', function (event) {
 				if (event.prevVal) {
-					table.getRecord(event.prevVal).setCode(editor.get('content'));
+					table.getRecord(event.prevVal).setCode(self._simplifyString(editor.getContent()));
 				}
 				editor.set('content', table.getRecord(event.newVal).getCode());
-			});
+			}, this);
 
 			Y.on('available', function () {
 				editor.render(container.one('#mod_edit'));
 			}, '#mod_edit');
 
 			container.one('#btnCompile').on('click', function (event) {
-				var text = editor.get('content');
-				Y.log(text);
+				var token,
+					stream = this.get('stream'),
+					scanner = this.get('scanner');
+
+				stream.setBuffer(editor.getContent());
+
+				scanner.setStream(stream);
+				scanner.reset();
+
+				token = scanner.getToken();
+				while (token.sym != Y.YOJS.Symbols.EOF) {
+					Y.log(token);
+					token = scanner.getToken();
+				}
+				
 			}, this);
 
 			return self;
@@ -110,19 +145,30 @@ YUI.add('yojs-page-project', function (Y) {
 				value: {
 					project 		: 'Project',
 					noModules		: 'No modules in project.',
-					numColumn		: 'num',
-					nameColumn		: 'name',
-					dateColumn		: 'date',
+					numColumn		: '#',
+					nameColumn		: 'Name',
+					dateColumn		: 'Date',
+					loadedColumn	: 'Loaded',
 					btnNewModule	: 'New Module',
 					btnCompile		: 'Compile',
 					btnRun			: 'Run',
 					modulesSection	: 'Modules',
-					codeSection		: 'Code'
+					codeSection		: 'Code',
+					yes 			: 'Yes',
+					no 				: 'No'
 				}
 			},
 			project: {
 				value		: null,
 				validator	: Y.YOJS.Validator.Model.Project
+			},
+			stream: {
+				value 		: null,
+				validator 	: Y.YOJS.Validator.isStream
+			},
+			scanner: {
+				value 		: new Y.YOJS.Scanner,
+				validator 	: Y.YOJS.Validator.isScanner
 			}
 		}
 	});
@@ -135,6 +181,8 @@ YUI.add('yojs-page-project', function (Y) {
 		'editor',
 		'cssbutton',
 		'yojs-formatters',
-		'yojs-model-project'
+		'yojs-model-project',
+		'yojs-stream',
+		'yojs-scanner'
 	]
 });

@@ -4,6 +4,8 @@ YUI.add('yojs-model-module', function (Y) {
 		NAME 		= 'name',
 		DATE		= 'date',
 		DESCRIPTION	= 'description',
+		DEFINITION 	= 'definition',
+		MODIFIED 	= 'modified',
 		CODE		= 'code';
 
 	Y.namespace('YOJS.Model').Module = Y.Base.create('yojs-model-module', Y.Model, [], {
@@ -41,9 +43,29 @@ YUI.add('yojs-model-module', function (Y) {
 
 		setCode: function (code) {
 			return this.set(CODE, code);
+		},
+
+		getDefinition: function () {
+			return this.get(DEFINITION);
+		},
+
+		setDefinition: function (definition) {
+			return this.set(DEFINITION, definition);
+		},
+
+		isModified: function () {
+			return this.get(MODIFIED);
+		},
+
+		setModified: function (modified) {
+			return this.set(MODIFIED, modified);
 		}
 	}, {
 		ATTRS: {
+			objId: {
+				value		: 'module',
+				readonly	: true
+			},
 			name: {
 				value		: 'noname',
 				validator	: Y.Lang.isString
@@ -56,9 +78,18 @@ YUI.add('yojs-model-module', function (Y) {
 				value		: null,
 				validator	: Y.Lang.isString
 			},
+			definition: {
+				value 		: '',
+				validator 	: Y.Lang.isString
+			},
 			code: {
-				value		: null
-			}
+				value		: '',
+				validator 	: Y.Lang.isString
+			},
+			modified: {
+				value		: true,
+				validator 	: Y.Lang.isBoolean
+			},
 		}
 	});
 

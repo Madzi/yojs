@@ -46,7 +46,7 @@ YUI.add('yojs-app', function (Y) {
 			this.setProjects(projects);
 		},
 
-		template: '<div id="app_page"></div>',
+		template: '<div id="app_menu"></div><div id="app_page"></div>',
 
 		initializer: function () {
 			var self 		= this,

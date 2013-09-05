@@ -5,7 +5,7 @@ YUI.add('yojs-scanner', function (Y) {
 			NULL 		:  0,	TIMES 		:  1,	SLASH 		:  2,	DIV 	:  3,	MOD 	:  4,
 			AND			:  5,	PLUS		:  6,	MINUS		:  7,	OR		:  8,	EQL		:  9,
 			NEQ			: 10,	LSS			: 11,	LEQ			: 12,	GTR		: 13,	GEQ		: 14,
-			IN			: 15,	IS			: 16	ARROW		: 17,	PERIOD 	: 18,	COMMA	: 19,
+			IN			: 15,	IS			: 16,	ARROW		: 17,	PERIOD 	: 18,	COMMA	: 19,
 			COLON		: 20,	UPTO		: 21,	RPAREN		: 22,	RBRAK	: 23,	RBRACE	: 24,
 			OF			: 25,	THEN		: 26,	DO			: 27,	TO		: 28,	BY		: 29,
 			LPAREN		: 30,	LBRAK		: 31,	LBRACE		: 32,	NOT		: 33,	BECOMES	: 34,
@@ -21,7 +21,7 @@ YUI.add('yojs-scanner', function (Y) {
 			NULL 		:  0,	TIMES 		:  1,	SLASH 		:  2,	DIV 		:  3,	MOD 		:  4,
 			AND			:  5,	PLUS		:  6,	MINUS		:  7,	OR			:  8,	EQL			:  9,
 			NEQ			: 10,	LSS			: 11,	LEQ			: 12,	GTR			: 13,	GEQ			: 14,
-			IN			: 15,	IS			: 16	ARROW		: 17,	PERIOD 		: 18,	COMMA		: 19,
+			IN			: 15,	IS			: 16,	ARROW		: 17,	PERIOD 		: 18,	COMMA		: 19,
 			COLON		: 20,	UPTO		: 21,	RPAREN		: 22,	RBRAK		: 23,	RBRACE		: 24,
 			OF			: 25,	THEN		: 26,	DO			: 27,	TO			: 28,	BY			: 29,
 			LPAREN		: 30,	LBRAK		: 31,	LBRACE		: 32,	NOT			: 33,	BECOMES		: 34,
@@ -37,19 +37,25 @@ YUI.add('yojs-scanner', function (Y) {
 
 	SYM_TYPES = {
 		NULL 		: null,
+		IDENT 		: 'IDENT',
+		STRING 		: 'STRING',
 		RELATION	: 'RELATION',
 		OPERATOR 	: 'OPERATOR',
 		KEYWORD		: 'KEYWORD',
 		WHITESPACE	: 'WHITESPACE',
 		DELIMITER	: 'DELIMITER',
-		ERROR		: 'ERROR'
+		ERROR		: 'ERROR',
+		COMMENT 	: 'COMMENT',
+		NUMBER 		: 'NUMBER'
 	},
 
 	STREAM 		= 'stream',
 	SYMBOLS 	= 'symbols';
 
+	Y.namespace('YOJS').Symbols = Symbols.O7;
+
 	Y.namespace('YOJS').Scanner = Y.Base.create('yojs-scanner', Y.Model, [], {
-		_ch: '\n',
+		_ch: null,
 
 		_sym: function (sym, type, name) {
 			return {
@@ -68,22 +74,23 @@ YUI.add('yojs-scanner', function (Y) {
 			if (!Y.Lang.isNull(stream)) {
 				stream.reset();
 			}
-			this._ch = stream.get();
+			this.getCh();
 		},
 
 		getCh: function () {
 			var stream = this.getStream();
 
-			return Y.Lang.isNull(stream) ? null : stream.get();
+			this._ch = Y.Lang.isNull(stream) ? null : stream.getCh();
 		}, 
 
 		getToken: function () {
-			var symbols = this.getSymbols();
+			var was,
+				symbols = this.getSymbols();
 
 			if (this._ch) {
-				if (this.isAplha()) {
+				if (this.isAlpha(this._ch)) {
 					return this.ident();
-				} else if (this.isDigit()) {
+				} else if (this.isDigit(this._ch)) {
 					return this.number();
 				}
 				switch (this._ch) {
@@ -178,46 +185,123 @@ YUI.add('yojs-scanner', function (Y) {
 						this.getCh();
 						return this._sym(symbols.NOT, SYM_TYPES.OPERATOR, '~');
 					default:
+						was = this._ch;
 						this.getCh();
-						return this._sym(symbols.NULL, SYM_TYPES.NULL, this._ch);
+						return this._sym(symbols.NULL, SYM_TYPES.NULL, was);
 				}
 			}
 			return this._sym(symbols.EOF, SYM_TYPES.NULL, null);
 		},
 
-		isAplha: function () {
-			return /[a-zA-Z]/.test(this._ch);
+		isAlpha: function (ch) {
+			return /[a-zA-Z_]/.test(ch);
 		},
 
-		isDigit: function () {
-			return /[0-9]/.test(this._ch);
+		isDigit: function (ch) {
+			return /[0-9]/.test(ch);
 		},
 
-		ident: function () {},
+		ident: function () {
+			var kwtest,
+				idname = '';
 
-		number: function () {},
+			while (this.isAlpha(this._ch)) {
+				idname += this._ch;
+				this.getCh();
+			}
 
-		string: function () {},
+			kwtest = this.get('symbols')[idname];
 
-		comment: function () {},
+			if (kwtest) {
+				return this._sym(kwtest, SYM_TYPES.KEYWORD, idname);
+			}
+			return this._sym(this.get('symbols').IDENT, SYM_TYPES.IDENT, idname);
+		},
+
+		number: function () {
+			var number = parseInt(this._ch , 10);
+
+			this.getCh();
+			return this._sym(this.get('symbols').NUMBER, SYM_TYPES.NUMBER, number);
+		},
+
+		string: function () {
+			var chars = '',
+				symbols = this.get('symbols'),
+				qt = this._ch;
+
+			this.getCh();
+			while (!Y.Lang.isNull(this._ch) && this._ch !== qt) {
+				chars += this._ch;
+				this.getCh();
+			}
+			if (Y.Lang.isNull(this._ch)) {
+				return this._sym(symbols.ERROR, SYM_TYPES.ERROR, strings.stringNotClosed);
+			}
+			this.getCh();
+			return this._sym(symbols.STRING, SYM_TYPES.STRING, chars);
+		},
+
+		comment: function () {
+			var mode 	= this._ch,
+				comment = '(*',
+				symbols = this.get('symbols'),
+				level	= 1;
+
+			while (level > 0 && !Y.Lang.isNull(this._ch)) {
+				this.getCh();
+				comment += this._ch;
+				switch (this._ch) {
+					case ')':
+						if (mode === '*') {
+							level -= 1;
+							mode = ')';
+						}
+						break;
+
+					case '(':
+						mode = '(';
+						break;
+
+					case '*':
+						if (mode === '(') {
+							level += 1;
+						}
+						mode = '*';
+						break;
+
+					default:
+						mode = '?';
+				}
+			}
+			if (Y.Lang.isNull(this._ch)) {
+				return this._sym(symbols.ERROR, SYM_TYPES.ERROR, strings.commentNotClosed);
+			}
+			return this._sym(symbols.NULL, SYM_TYPES.COMMENT, comment);
+			
+		},
 
 		getStream: function () {
-			return this.get(STREAM);
+			return this.get('stream');
 		},
 
 		setStream: function (stream) {
-			return this.set(STREAM, stream);
+			return this.set('stream', stream);
 		},
 
 		getSymbols: function () {
-			return this.get(SYMBOLS);
+			return this.get('symbols');
 		},
 
 		setSymbols: function (symbols) {
-			return this.set(SYMBOLS, symbols);
+			return this.set('symbols', symbols);
 		}
 	}, {
-		ATTRS: [
+		ATTRS: {
+			strings: {
+				stringNotClosed		: 'String not closed',
+				commentNotClosed	: 'Comment not closed'
+			},
 			stream: {
 				value		: null,
 				validator	: Y.YOJS.Validator.isStream
@@ -226,8 +310,12 @@ YUI.add('yojs-scanner', function (Y) {
 				value		: Symbols.O7,
 				validator	: Y.Lang.isObject
 			}
-		]
+		}
 	});
+
+	Y.namespace('YOJS').isScanner = function (val) {
+		return val instanceof Y.YOJS.Scanner;
+	};
 
 }, '0.1', {
 	requires: [
